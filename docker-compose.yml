@@ -1,0 +1,62 @@
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${DB_USER:-some}
+      POSTGRES_PASSWORD: ${DB_PASS:-some}
+      POSTGRES_DB: ${DB_NAME:-some}
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    networks:
+      - some-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-some} -d ${DB_NAME:-some}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    mem_limit: 512m
+    cpus: 0.75
+
+  backend:
+    build:
+      context: ./some-backend
+    restart: unless-stopped
+    environment:
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_USER: ${DB_USER:-some}
+      DB_PASS: ${DB_PASS:-some}
+      DB_NAME: ${DB_NAME:-some}
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "3006:3006"
+    networks:
+      - some-net
+    mem_limit: 512m
+    cpus: 0.75
+
+  frontend:
+    build:
+      context: ./some-webapp
+    restart: unless-stopped
+    environment:
+      BACKEND_URL: http://backend:3006
+    depends_on:
+      - backend
+    ports:
+      - "3000:3000"
+    networks:
+      - some-net
+    mem_limit: 512m
+    cpus: 0.75
+
+volumes:
+  db-data:
+    name: some_db_data
+
+networks:
+  some-net:
+    name: some-net
