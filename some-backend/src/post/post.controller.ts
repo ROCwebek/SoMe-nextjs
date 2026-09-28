@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, Post, Put } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Post, Patch } from '@nestjs/common';
 import { PostService } from './post.service';
 import { CreatePostDto } from './dtos/create-post.dto';
 import { UpdatePostDto } from './dtos/update-post.dto';
@@ -28,7 +28,7 @@ export class PostController {
 
     //Why id: string is the honest annotation: TypeScript types are erased at compile time. 
     //@Param('id') pulls the value out of Express's req.params, and those are always strings
-    @Put(':id')
+    @Patch(':id')
     updatePost(@Param('id') id: string, @Body() dto: UpdatePostDto) {
         return this.postService.updatePost(Number(id), dto);
     }
