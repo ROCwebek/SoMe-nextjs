@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { updatePost, deletePost } from "../../../../lib/api";
+import { fetchPost, updatePost, deletePost } from "../../../../lib/api";
 import { NewPostDto } from "../../../../types/newPostDto";
 
 export async function PATCH(
@@ -13,10 +13,12 @@ export async function PATCH(
     const post = await updatePost(Number(id), body);
 
     return NextResponse.json(post);
-  } catch {
+  } catch (error) {
+    console.error("UPDATE ERROR:", error);
+
     return NextResponse.json(
       { message: "Could not update post" },
-      { status: 502 }
+      { status: 500 }
     );
   }
 }
@@ -34,6 +36,24 @@ export async function DELETE(
   } catch {
     return NextResponse.json(
       { message: "Could not delete post" },
+      { status: 502 }
+    );
+  }
+}
+
+export async function GET(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const { id } = await params;
+
+  try {
+    const post = await fetchPost(Number(id));
+
+    return NextResponse.json(post);
+  } catch {
+    return NextResponse.json(
+      { message: "Could not fetch post" },
       { status: 502 }
     );
   }

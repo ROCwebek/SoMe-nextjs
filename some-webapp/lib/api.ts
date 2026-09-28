@@ -15,6 +15,18 @@ export async function fetchPosts(): Promise<PostDto[]> {
   return result.json();
 }
 
+export async function fetchPost(id: number): Promise<PostDto> {
+  const result = await fetch(`${baseUrl}/posts/${id}`, {
+    cache: "no-store",
+  });
+
+  if (!result.ok) {
+    throw new Error("Could not fetch post");
+  }
+
+  return result.json();
+}
+
 export async function addPost(post: NewPostDto): Promise<PostDto> {
   const result = await fetch(baseUrl + "/posts", {
     method: "POST",

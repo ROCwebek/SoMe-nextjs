@@ -24,7 +24,13 @@ export default async function Feed() {
       {error ? <p>{error}</p> : null}
 
       {posts.map((post) => (
-        <Post key={post.id} title={post.title} body={post.body} author={post.author} />
+        <Post
+          key={post.id}
+          id={post.id}
+          title={post.title}
+          body={post.body}
+          author={post.author}
+        />
       ))}
     </div>
   );
