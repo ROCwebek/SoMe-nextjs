@@ -2,6 +2,7 @@
 
 import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
+import { Button } from "../../components/Button";
 import { NewPostDto } from "../../types/newPostDto";
 
 export default function NewPost() {
@@ -35,25 +36,30 @@ export default function NewPost() {
   };
 
   return (
-    <form onSubmit={handleNewPost} style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+    <form onSubmit={handleNewPost} className="flex flex-col gap-2">
       {error ? <p>{error}</p> : null}
       <input
         value={title}
         onChange={(e) => setTitle(e.target.value)}
         placeholder="Title"
+        className="rounded border border-line px-2 py-1"
       />
       <textarea
         value={body}
         onChange={(e) => setBody(e.target.value)}
         placeholder="Body"
         rows={4}
+        className="rounded border border-line px-2 py-1"
       />
       <input
         value={author}
         onChange={(e) => setAuthor(e.target.value)}
         placeholder="Author"
+        className="rounded border border-line px-2 py-1"
       />
-      <button type="submit">Save Post</button>
+      <Button type="submit" className="self-start">
+        Save Post
+      </Button>
     </form>
   );
 }

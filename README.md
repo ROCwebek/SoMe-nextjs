@@ -1,61 +1,37 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="200" alt="Nest Logo" /></a>
-</p>
+# SoMe - a containerised multi-service web app
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+A small social-media style app: you read a feed of posts and write new ones.
+It is built as three containers wired together by Docker Compose - a Next.js
+frontend, a NestJS REST API, and a PostgreSQL database.
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://coveralls.io/github/nestjs/nest?branch=master" target="_blank"><img src="https://coveralls.io/repos/github/nestjs/nest/badge.svg?branch=master#9" alt="Coverage" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+This repo is the submission for the **Development Environments** project,
+*Containerizing a Web Application*.
 
-## Description
+## Repo layout
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+| Path | What it is |
+| --- | --- |
+| [`some-webapp/`](some-webapp) | Next.js 15 (App Router) frontend - see its [README](some-webapp/README.md) |
+| [`some-backend/`](some-backend) | NestJS REST API over PostgreSQL via TypeORM - see its [README](some-backend/README.md) |
+| [`docker-compose.yml`](docker-compose.yml) | Builds and wires up all three services |
 
-## Running everything with Docker Compose
+## Quick start
 
-This repo is a small multi-service app: a NestJS API (`some-backend`), a
-Next.js frontend (`some-webapp`), and a PostgreSQL database. `docker-compose.yml`
-at the repo root builds and wires up all three:
-
-| Service | Built from | Port | Notes |
-| --- | --- | --- | --- |
-| `db` | `postgres:16-alpine` | - | Data persists in the named volume `some_db_data` |
-| `backend` | `./some-backend/Dockerfile` | `3006` | NestJS API, waits for `db` to be healthy |
-| `frontend` | `./some-webapp/Dockerfile` | `3000` | Next.js app, talks to `backend` over the compose network |
-
-Both Dockerfiles use multi-stage builds (separate `deps`/`build` stages from a
-minimal `runtime` stage that only ships production deps and build output) and
-run their process as the non-root `node` user baked into the `node:20-alpine`
-image. `db`, `backend` and `frontend` share one named network (`some-net`),
-and each service has a `mem_limit`/`cpus` cap (512 MB / 0.75 CPU) so one
-container can't starve the others.
-
-### Run it
+You need Docker Desktop (or any Docker engine with the Compose plugin). Nothing
+else - no Node.js install, no local PostgreSQL.
 
 ```bash
-# optional: copy the env file if you want non-default DB credentials
+# 1. copy the env template (sets the database credentials)
 cp .env.example .env
 
+# 2. build the images and start everything
 docker compose up --build
 ```
 
-- Frontend: http://localhost:3000
-- Backend API: http://localhost:3006/posts
+Then open:
+
+- Frontend: <http://localhost:3000>
+- API: <http://localhost:3006/posts>
 
 Stop everything with:
 
@@ -63,105 +39,138 @@ Stop everything with:
 docker compose down
 ```
 
-Postgres data lives in the `some_db_data` volume and survives a plain
-`docker compose down` / `docker compose up`. Add a post through the frontend,
-bring the stack down and back up, and confirm the post is still there; only
-`docker compose down -v` (or `docker volume rm some_db_data`) actually wipes
-the database.
+## The services
 
-Check resource usage of the running containers with:
+| Service | Built from | Port | Notes |
+| --- | --- | --- | --- |
+| `db` | `postgres:16-alpine` | internal only | Data persists in the named volume `some_db_data` |
+| `backend` | [`some-backend/Dockerfile`](some-backend/Dockerfile) | `3006` | Waits for `db` to pass its healthcheck before starting |
+| `frontend` | [`some-webapp/Dockerfile`](some-webapp/Dockerfile) | `3000` | Reaches the API at `http://backend:3006` over the internal network |
+
+The database port is deliberately **not** published to the host - only the
+frontend and the API can reach it, over the private network.
+
+## How the containerisation requirements are met
+
+**Multi-stage builds.** Both Dockerfiles separate a `deps` stage (installs
+dependencies) and a `build` stage (compiles) from a slim `runtime` stage that
+copies in only the build output. The backend adds a `prod-deps` stage so that
+`npm ci --omit=dev` output ships instead of the full dev toolchain; the frontend
+uses Next.js `output: "standalone"`, which emits a minimal server with only the
+modules it actually imports. The compilers and dev dependencies never reach the
+final image.
+
+**Rootless.** Each runtime stage ends with `USER node`, the unprivileged user
+baked into `node:20-alpine`. Files copied into the image are `--chown`ed to that
+user, so nothing runs as root.
+
+**Small base images.** Every stage builds on Alpine variants.
+
+**Named volume.** `some_db_data` is mounted at `/var/lib/postgresql/data`, so the
+database survives the containers being removed and recreated.
+
+**Named network.** All three services join `some-net`. Containers address each
+other by service name (`db`, `backend`) rather than by IP.
+
+**Resource limits.** Each service caps out at `mem_limit: 512m` and `cpus: 0.75`,
+so no single container can starve the others.
+
+**Startup ordering.** `db` has a `pg_isready` healthcheck, and `backend` uses
+`depends_on: condition: service_healthy` so the API does not try to connect to a
+database that is still initialising.
+
+## Configuration
+
+There is **one** env file, at the repo root. Copy `.env.example` to `.env` and
+adjust if you want non-default values. It serves both ways of running the
+project: Compose reads it automatically, and the backend reads it too when you
+run that on your host instead.
+
+| Variable | Meaning | Default |
+| --- | --- | --- |
+| `DB_USER` | PostgreSQL user, created on first start | `some` |
+| `DB_PASS` | That user's password | `some` |
+| `DB_NAME` | Database name | `some` |
+| `DB_HOST` | Database host, host-mode only | `localhost` |
+| `DB_PORT` | Database port, host-mode only | `5432` |
+| `PORT` | Port the backend listens on | `3006` |
+| `BACKEND_URL` | Where the frontend reaches the API | `http://localhost:3006` |
+
+Under Compose, `docker-compose.yml` overrides `DB_HOST`/`DB_PORT` with `db` and
+`5432` and `BACKEND_URL` with `http://backend:3006`, because inside the network
+the services are reachable at their service names. Values set in
+`docker-compose.yml` always win over the file, so the host-mode entries above
+are simply ignored there.
+
+The stack also starts with no `.env` at all - every value has a default.
+
+## Verifying it works
+
+**The volume really persists data.** Add a post through the frontend, then:
+
+```bash
+docker compose down     # removes the containers, keeps the volume
+docker compose up       # no --build needed
+```
+
+The post is still in the feed. Only `docker compose down -v` (or
+`docker volume rm some_db_data`) wipes the database.
+
+**Resource usage.** With the stack running:
 
 ```bash
 docker stats
 ```
 
-## Database setup
+Each container should sit well under its 512 MB / 0.75 CPU cap.
 
-The section below describes running the NestJS API directly on the host
-(without Docker), against a locally installed PostgreSQL - useful for fast
-iteration on the backend alone. For running the full stack, use Docker
-Compose above instead.
-
-The posts API is backed by PostgreSQL through TypeORM. Before the app will boot:
+**Image sizes.** To see what the multi-stage builds saved:
 
 ```bash
-# 1. create the database
-createdb some
-
-# 2. copy the example env file and fill in your credentials
-cp .env.example .env
+docker images | grep some-nextjs
 ```
 
-`.env` is gitignored; `.env.example` lists the names every developer must set:
-
-| Variable | Meaning |
-| --- | --- |
-| `DB_HOST` | database host, e.g. `localhost` |
-| `DB_PORT` | database port, e.g. `5432` |
-| `DB_USER` | postgres user |
-| `DB_PASS` | that user's password (may be empty for a local trust setup) |
-| `DB_NAME` | database name, e.g. `some` |
-
-The `posts` table is created automatically from `src/post/entities/post.entity.ts`,
-because `synchronize: true` is set in `AppModule`. That is convenient while
-learning and **must not be used in production** - it will alter and drop columns
-to match the entity.
-
-## The posts API
-
-| Method | Route | Does |
-| --- | --- | --- |
-| `GET` | `/posts` | every post |
-| `GET` | `/posts/:id` | one post, 404 if the id is unknown |
-| `POST` | `/posts` | create; the database assigns `id` and `created_at` |
-| `PUT` | `/posts/:id` | replace `title`, `body` and `author`, 404 if unknown |
-| `DELETE` | `/posts/:id` | delete, returning the removed post, 404 if unknown |
-
-Bodies are validated by `class-validator`, so a missing or empty `title`, `body`
-or `author` is rejected with a 400 before the controller runs.
-
-## Installation
+**The API directly.**
 
 ```bash
-$ npm install
+curl http://localhost:3006/posts
+curl -X POST http://localhost:3006/posts \
+  -H 'Content-Type: application/json' \
+  -d '{"title":"Hello","body":"First post","author":"Oscar"}'
 ```
 
-## Running the app
+## Remote access (optional)
+
+To demo the app running on a remote machine, forward the port over SSH rather
+than exposing it publicly:
 
 ```bash
-# development
-$ npm run start
-
-# watch mode
-$ npm run start:dev
-
-# production mode
-$ npm run start:prod
+ssh -L 3000:127.0.0.1:3000 you@your-remote
 ```
 
-## Test
+The remote container's port 3000 then answers at <http://localhost:3000> in your
+own browser.
 
-```bash
-# unit tests
-$ npm run test
+## Troubleshooting
 
-# e2e tests
-$ npm run test:e2e
+**Port already in use.** Something else is on 3000 or 3006. Stop it, or change
+the left-hand side of the `ports` mapping in `docker-compose.yml`.
 
-# test coverage
-$ npm run test:cov
-```
+**Backend exits with a connection error.** Usually a stale volume whose
+credentials no longer match `.env` - Postgres only applies `POSTGRES_USER` and
+`POSTGRES_PASSWORD` when it initialises an *empty* data directory. Reset with
+`docker compose down -v && docker compose up --build`.
 
-## Support
+**Frontend loads but the feed is empty and logs "Could not load posts".** The
+API is not reachable. Check `docker compose ps` that `backend` is running, and
+`docker compose logs backend`.
 
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
+**Changes to the source do not show up.** The images are built, not
+bind-mounted, so rebuild with `docker compose up --build`.
 
-## Stay in touch
+## Developing without Docker
 
-- Author - [Kamil Myśliwiec](https://kamilmysliwiec.com)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
-
-## License
-
-Nest is [MIT licensed](LICENSE).
+Both services run directly on a host with Node.js 20 and a local PostgreSQL -
+useful for fast iteration on one service. They use the same root `.env`. See
+[`some-backend/README.md`](some-backend/README.md) and
+[`some-webapp/README.md`](some-webapp/README.md).

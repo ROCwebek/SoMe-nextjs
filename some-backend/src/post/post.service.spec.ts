@@ -65,12 +65,11 @@ describe('PostService', () => {
 
   it('createPost saves the dto and lets the database fill in id/created_at', async () => {
     const dto = { title: 'title3', body: 'body3', author: 'author3' };
-    repo.create.mockReturnValue(dto);
     repo.save.mockResolvedValue({ id: 3, ...dto, created_at: new Date() });
 
     const created = await service.createPost(dto);
 
-    expect(repo.create).toHaveBeenCalledWith(dto);
+    // the service hands the dto straight to save(); it never calls create()
     expect(repo.save).toHaveBeenCalledWith(dto);
     expect(created).toMatchObject({ id: 3, title: 'title3' });
   });

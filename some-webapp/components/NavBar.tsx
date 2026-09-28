@@ -1,15 +1,12 @@
 import Link from "next/link";
 
 export const NavBar = () => (
-  <nav
-    style={{
-      display: "flex",
-      gap: 16,
-      padding: "12px 16px",
-      borderBottom: "1px solid #e2e2e2",
-    }}
-  >
-    <Link href="/">Feed</Link>
-    <Link href="/settings">Settings</Link>
+  <nav className="flex gap-4 border-b border-line px-4 py-3">
+    <Link href="/" className="text-blue-700 underline">
+      Feed
+    </Link>
+    <Link href="/settings" className="text-blue-700 underline">
+      Settings
+    </Link>
   </nav>
 );

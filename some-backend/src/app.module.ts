@@ -1,9 +1,6 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule, TypeOrmModuleOptions } from '@nestjs/typeorm';
-import { AppController } from './app.controller';
-import { AppService } from './app.service';
-import { BooksModule } from './books/books.module';
 import { PostModule } from './post/post.module';
 import { Post } from './post/entities/post.entity';
 
@@ -11,7 +8,15 @@ import { Post } from './post/entities/post.entity';
   imports: [
     // isGlobal means ConfigService can be injected anywhere without importing
     // this module again. Reads .env into process.env once, at start-up.
-    ConfigModule.forRoot({ isGlobal: true }),
+    //
+    // The repo root .env is the single source of truth. A some-backend/.env
+    // wins over it if one exists. Inside the container neither file is
+    // present - Compose supplies the values through the environment directly,
+    // and those always beat a file.
+    ConfigModule.forRoot({
+      isGlobal: true,
+      envFilePath: ['.env', '../.env'],
+    }),
 
     // forRootAsync waits for the configuration before opening the connection.
     // The connection is opened once here; every repository shares it.
@@ -31,10 +36,7 @@ import { Post } from './post/entities/post.entity';
       }),
     }),
 
-    BooksModule,
     PostModule,
   ],
-  controllers: [AppController],
-  providers: [AppService],
 })
 export class AppModule {}

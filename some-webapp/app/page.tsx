@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Button } from "../components/Button";
 import { Post } from "../components/Post";
 import { fetchPosts } from "../lib/api";
 import { PostDto } from "../types/postDto";
@@ -18,13 +19,18 @@ export default async function Feed() {
   return (
     <div>
       <Link href="/new-post">
-        <button type="button">New post</button>
+        <Button type="button">New post</Button>
       </Link>
 
-      {error ? <p>{error}</p> : null}
+      {error ? <p className="mb-2">{error}</p> : null}
 
       {posts.map((post) => (
-        <Post key={post.id} title={post.title} body={post.body} author={post.author} />
+        <Post
+          key={post.id}
+          title={post.title}
+          body={post.body}
+          author={post.author}
+        />
       ))}
     </div>
   );

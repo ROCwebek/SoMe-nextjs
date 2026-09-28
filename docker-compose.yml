@@ -23,6 +23,7 @@ services:
       context: ./some-backend
     restart: unless-stopped
     environment:
+      PORT: 3006
       DB_HOST: db
       DB_PORT: 5432
       DB_USER: ${DB_USER:-some}

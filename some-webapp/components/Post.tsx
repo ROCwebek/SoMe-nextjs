@@ -1,9 +1,9 @@
 type PostProps = { title: string; body: string; author: string };
 
 export const Post = ({ title, body, author }: PostProps) => (
-  <article style={{ borderBottom: "1px solid #e2e2e2", padding: "12px 0" }}>
-    <h3 style={{ margin: "0 0 4px" }}>{title}</h3>
-    <p style={{ margin: "0 0 4px" }}>{body}</p>
-    <p style={{ margin: 0, color: "#666", fontSize: 14 }}>{author}</p>
+  <article className="border-b border-line py-3">
+    <h3 className="mb-1 text-lg font-bold">{title}</h3>
+    <p className="mb-1">{body}</p>
+    <p className="text-sm text-muted">{author}</p>
   </article>
 );
