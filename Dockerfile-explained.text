@@ -172,3 +172,9 @@ Fordi vi bruger standalone, laver Next.js en mindre version med kun de nødvendi
 Derefter starter vi et nyt runner-stage, som er et rent Node.js-miljø.
 Vi kopierer kun den færdige app og de nødvendige static-filer fra builderen over.
 Til sidst fortæller vi Docker, at appen bruger port 3000, og at containeren skal starte med node server.js, når den kører.
+
+Builder:
+Installer → Kopier kode → Byg app
+
+Runner:
+Tag kun det nødvendige → Start appen
