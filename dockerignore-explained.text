@@ -1,0 +1,57 @@
+-------------------------------------------------STEP 1-------------------------------------------------
+node_modules
+
+Node_modules = mappen hvor at npm gemmer de pakker/dependecies som vores projekt bruger.
+Hvis vi eksempelvis har dette i package.json:
+    "dependencies": {
+        "next": "^15.5.4",
+        "react": "^19.2.0",
+        "react-dom": "^19.2.0"
+    }
+og kører npm ci, så installeres pakkerne i node_modules.
+Vi har ikke brug for en node_modules i Docker, da vi siger:
+COPY package*.json ./
+RUN npm ci
+Docker får altså først at vide:
+"Her er mine dependencies."
+
+Derefter:
+"Installer dem selv."
+
+Så Docker laver sin egen:
+/app/node_modules/
+
+-------------------------------------------------STEP 1-------------------------------------------------
+.next
+
+.next = .next er den mappe, som Next.js selv laver, når du bygger appen.
+
+Vi ignorer .next fordi vi gerne vil have et rent docker build.
+Vi bruger derfor kun de mapper som vi har givet i vores build fase såsom:
+COPY --from=builder /app/.next/standalone ./
+COPY --from=builder /app/.next/static ./.next/static
+
+-------------------------------------------------STEP 1-------------------------------------------------
+.git
+
+.git = .git er den mappe, hvor Git gemmer information om dit repository.
+
+.git indeholder blandt andet information om:
+- commits
+- branches
+- Git-historik
+- hvilke ændringer Git holder styr på
+- repositoryets interne Git-data
+
+Vi ignorerer den fordi vi ikke har brug for vores Git-historik for at bygge eller køre Next.js-appen.
+
+-------------------------------------------------STEP 1-------------------------------------------------
+.env*.local
+
+.env*.local = handler om environment-filer, som ofte bruges til at gemme indstillinger for projektet.
+
+
+-------------------------------------------------STEP 1-------------------------------------------------
+*.md
+
+-------------------------------------------------STEP 1-------------------------------------------------

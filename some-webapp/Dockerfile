@@ -1,24 +1,25 @@
-# --- deps: install with dev deps, needed to run `next build` ---
-FROM node:20-alpine AS deps
+FROM node:22-alpine AS builder
+
 WORKDIR /app
-COPY package.json package-lock.json ./
+
+COPY package*.json ./
+
 RUN npm ci
 
-# --- build: compile to .next/standalone ---
-FROM node:20-alpine AS build
-WORKDIR /app
-COPY --from=deps /app/node_modules ./node_modules
 COPY . .
+
 RUN npm run build
 
-# --- runtime: only the standalone server + static assets, run as non-root ---
-FROM node:20-alpine AS runtime
+
+FROM node:22-alpine AS runner
+
 WORKDIR /app
+
+COPY --from=builder /app/.next/standalone ./
+COPY --from=builder /app/.next/static ./.next/static
+
 ENV NODE_ENV=production
-COPY --from=build /app/public ./public
-COPY --from=build --chown=node:node /app/.next/standalone ./
-COPY --from=build --chown=node:node /app/.next/static ./.next/static
-USER node
+
 EXPOSE 3000
-ENV PORT=3000
+
 CMD ["node", "server.js"]

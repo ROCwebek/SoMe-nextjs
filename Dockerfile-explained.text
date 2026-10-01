@@ -1,0 +1,180 @@
+-------------------------------------------------STEP 1-------------------------------------------------
+
+FROM node:22-alpine AS builder
+
+FROM = starter et nyt stage
+Stage = Hver gang Docker møder en FROM, starter et nyt stage. I vores Dockerfile har vi to stages:
+
+Dockerfile
+│
+├── Stage 1: "builder"
+│   ├── npm ci
+│   ├── source code
+│   └── npm run build
+│
+└── Stage 2: "runner"
+    ├── færdig Next.js build
+    └── node server.js
+
+Et stage kan altså tænkes som et midlertidigt arbejdsområde i Docker-buildet.
+
+Node.js = En JavaScript runtime, som gør det muligt at køre JavaScript uden for browseren. 22 er versionen af node vi benytter.
+
+Alpine Linux = et meget lille Linux-baseret styresystem, som vores Docker-container kører i.
+
+AS builder = Lidt ligesom at give en variabel et navn. I vores tilfælde kalder vi vores stage 1 "builder".
+Vi bruger builder til at installere dependecies og bygge next.js appen
+
+Resultat:
+FROM node:22-alpine AS builder starter et nyt stage baseret på et Docker-image med Node.js 22 og Alpine Linux.
+Vi giver dette stage navnet builder, fordi det bruges til at installere dependencies og bygge vores Next.js-app.
+Senere kan vi kopiere det færdige build fra builder over i vores runner-stage.
+
+
+-------------------------------------------------STEP 2-------------------------------------------------
+
+WORKDIR /app
+
+Resultat:
+Fra nu af arbejder vi inde i /app.
+
+-------------------------------------------------STEP 3-------------------------------------------------
+
+COPY package*.json ./
+
+Begge filer oprettes under installationen af npx create-next-app@latest:
+package.json = beskriver projektet og fortæller blandt andet, hvilke dependencies projektet bruger.
+package-lock.json = låser de præcise versioner, npm har resolved/installeret.
+
+package.json er projektets "opskrift". Den fortæller fx, at projektet bruger Next.js, React osv.
+Når npm derefter installerer pakkerne, opretter/opdaterer den package-lock.json, som registrerer de præcise installerede versioner og dependency-træet.
+
+Resultat:
+Find filer i projektmappen, der matcher package*.json, og kopiér dem ind i Docker-imagets aktuelle arbejdsmappe (/app).
+
+-------------------------------------------------STEP 4-------------------------------------------------
+
+RUN npm ci
+
+RUN = Kør kommandoen
+npm = Et værktøj til at installere og håndterer pakker og bibloteker (node package manager)
+ci = Clean install, betyder at den bruger de præcise versioner som er defineret i package-lock.json
+
+Resultat:
+Mens Docker bygger imaget, skal npm installere projektets dependencies ud fra package-lock.json.
+-------------------------------------------------STEP 5-------------------------------------------------
+
+COPY . .
+
+Første  . = Kopier fra projektet på min pc. I vores tilfælde vil det være some-webapp.
+Andet . = Kopier til aktuelle arbejdsmappe. I vores tilfælde vil det være /app
+
+Resultat:
+COPY . . kopierer projektets filer fra din computer ind i /app i Docker.
+-------------------------------------------------STEP 6-------------------------------------------------
+
+RUN npm run build
+
+RUN = Docker skal udføre kommandoen
+npm = Et værktøj til at installere og håndtere pakker og bibloteker
+run = Kør et script
+build = scriptet hedder build
+
+i package.json har vi:
+    "scripts": {
+        "build": "next build"
+    }
+Derfor betyder npm run build altså "next build"
+
+Resultat:
+RUN npm run build fortæller Docker, at npm skal køre vores build-script. Scriptet kører next build, som bygger den færdige version af vores Next.js-app.
+Fordi vi bruger output: "standalone", laver Next.js også en minimal version med kun de nødvendige filer og dependencies til at køre appen.
+
+-------------------------------------------------STEP 7-------------------------------------------------
+
+FROM node:22-alpine AS runner
+
+Her starter stage 2 (Et nyt midlertidigt arbejdsområde):
+Runner = kører den færdige app mens builder bygger den.
+
+Resultat:
+Vi starter et nyt stage, som bruger Node.js 22 og Alpine Linux, og giver dette stage navnet runner.
+-------------------------------------------------STEP 8-------------------------------------------------
+
+WORKDIR /app
+
+Resultat:
+Fra nu af arbejder vi inde i /app.
+-------------------------------------------------STEP 9-------------------------------------------------
+
+COPY --from=builder /app/.next/standalone ./
+COPY --from=builder /app/.next/static ./.next/static
+
+--from=builder = Kopiér fra builder-staget
+/app/.next/standalone = Det vi vil kopiere
+./ = Til runnerens /app
+
+Grunden til, at vi kopierer dem separat, er, at .next/static ikke automatisk ligger inde i standalone-mappen.
+
+.next/static indeholder statiske filer som JavaScript og CSS, som Next.js har genereret under build,
+og som browseren skal bruge til at vise og køre appen korrekt.
+.next/static/
+├── JavaScript-filer
+├── CSS-filer
+└── andre filer genereret af Next.js
+
+Resultat:
+Gå til builder-staget, find den minimale standalone-version af appen, og kopiér den til /app i runner.
+De to COPY-linjer kopierer den færdigbyggede app og dens statiske filer fra builder over i runner, så runneren har de nødvendige filer til at køre appen.
+-------------------------------------------------STEP 10-------------------------------------------------
+
+ENV NODE_ENV=production
+
+ENV = opret en environment variable
+NODE_ENV = navnet på variablen
+production = værdien
+
+En environment variable er en navngivet værdi, som bruges til at give indstillinger eller information til et program uden at skrive værdien direkte ind i programkoden.
+Så i vores runner bruger vi production, fordi det er den færdigbyggede app, vi vil køre.
+
+Resultat:
+ENV NODE_ENV=production fortæller appen, at den kører som den færdige version og ikke i udviklingsmiljøet.
+-------------------------------------------------STEP 11-------------------------------------------------
+
+EXPOSE 3000
+
+Du kan tænke på en port som en dør ind til appen
+EXPOSE = “Denne container forventer at kommunikere gennem port 3000.”
+
+Resultat:
+EXPOSE 3000 = angiver, at containerens app bruger port 3000.
+
+-------------------------------------------------STEP 12-------------------------------------------------
+
+CMD ["node", "server.js"]
+
+CMD = kommando der køres, når containeren starter
+"node" = kør filen med Node.js
+"server.js" = filen der skal køres
+
+server.js bliver lavet som en del af vores Next.js standalone build. Det er den server, der sørger for, at vores færdige Next.js-app kører.
+
+Resultat:
+Når containeren starter, brug Node.js til at starte server.js.
+
+
+-------------------------------------------------SAMLET-------------------------------------------------
+
+Først starter vi et builder-stage med Node.js 22 og Alpine Linux.
+Her kopierer vi projektets package-filer ind og installerer alle nødvendige dependencies med npm ci.
+Derefter kopierer vi resten af koden ind og kører npm run build, som bygger vores færdige Next.js-app.
+Fordi vi bruger standalone, laver Next.js en mindre version med kun de nødvendige filer til at køre appen.  
+Derefter starter vi et nyt runner-stage, som er et rent Node.js-miljø.
+Vi kopierer kun den færdige app og de nødvendige static-filer fra builderen over.
+Til sidst fortæller vi Docker, at appen bruger port 3000, og at containeren skal starte med node server.js, når den kører.
+
+Builder:
+Installer → Kopier kode → Byg app
+
+Runner:
+Tag kun det nødvendige → Start appen
