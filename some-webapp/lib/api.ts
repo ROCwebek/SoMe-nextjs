@@ -15,6 +15,18 @@ export async function fetchPosts(): Promise<PostDto[]> {
   return result.json();
 }
 
+export async function fetchPost(id: number): Promise<PostDto> {
+  const result = await fetch(`${baseUrl}/posts/${id}`, {
+    cache: "no-store",
+  });
+
+  if (!result.ok) {
+    throw new Error("Could not fetch post");
+  }
+
+  return result.json();
+}
+
 export async function addPost(post: NewPostDto): Promise<PostDto> {
   const result = await fetch(baseUrl + "/posts", {
     method: "POST",
@@ -27,4 +39,31 @@ export async function addPost(post: NewPostDto): Promise<PostDto> {
   }
 
   return result.json();
+}
+
+export async function updatePost(
+  id: number,
+  post: Partial<NewPostDto>
+): Promise<PostDto> {
+  const result = await fetch(`${baseUrl}/posts/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify(post),
+    headers: { "Content-Type": "application/json" },
+  });
+
+  if (!result.ok) {
+    throw new Error("Could not update post");
+  }
+
+  return result.json();
+}
+
+export async function deletePost(id: number): Promise<void> {
+  const result = await fetch(`${baseUrl}/posts/${id}`, {
+    method: "DELETE",
+  });
+
+  if (!result.ok) {
+    throw new Error("Could not delete post");
+  }
 }

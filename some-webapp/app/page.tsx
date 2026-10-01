@@ -27,6 +27,7 @@ export default async function Feed() {
       {posts.map((post) => (
         <Post
           key={post.id}
+          id={post.id}
           title={post.title}
           body={post.body}
           author={post.author}
