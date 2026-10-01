@@ -27,7 +27,7 @@ import { Post } from './post/entities/post.entity';
         host: config.get('DB_HOST'),
         port: config.get<number>('DB_PORT'),
         username: config.get('DB_USER'),
-        password: config.get('DB_PASS'),
+        password: config.get('DB_PASSWORD'),
         database: config.get('DB_NAME'),
         entities: [Post],
         // creates and alters tables from the entities. Useful now, never in

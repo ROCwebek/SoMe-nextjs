@@ -1,63 +1,54 @@
 services:
   db:
     image: postgres:16-alpine
-    restart: unless-stopped
     environment:
-      POSTGRES_USER: ${DB_USER:-some}
-      POSTGRES_PASSWORD: ${DB_PASS:-some}
-      POSTGRES_DB: ${DB_NAME:-some}
+      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
     volumes:
-      - db-data:/var/lib/postgresql/data
+      - pgdata:/var/lib/postgresql/data
     networks:
-      - some-net
+      - app-net
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-some} -d ${DB_NAME:-some}"]
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
       interval: 5s
-      timeout: 5s
       retries: 5
-    mem_limit: 512m
-    cpus: 0.75
 
   backend:
-    build:
-      context: ./some-backend
-    restart: unless-stopped
+    build: ./some-backend
+    ports:
+      - "3001:3006"
     environment:
-      PORT: 3006
       DB_HOST: db
       DB_PORT: 5432
-      DB_USER: ${DB_USER:-some}
-      DB_PASS: ${DB_PASS:-some}
-      DB_NAME: ${DB_NAME:-some}
+      DB_NAME: ${DB_NAME}
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
     depends_on:
       db:
         condition: service_healthy
-    ports:
-      - "3006:3006"
     networks:
-      - some-net
-    mem_limit: 512m
-    cpus: 0.75
+      - app-net
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 256M
 
-  frontend:
-    build:
-      context: ./some-webapp
-    restart: unless-stopped
+  webapp:
+    build: ./some-webapp
+    ports:
+      - "3000:3000"
     environment:
       BACKEND_URL: http://backend:3006
     depends_on:
       - backend
-    ports:
-      - "3000:3000"
     networks:
-      - some-net
-    mem_limit: 512m
-    cpus: 0.75
-
-volumes:
-  db-data:
-    name: some_db_data
+      - app-net
 
 networks:
-  some-net:
-    name: some-net
+  app-net:
+    name: some-network
+
+volumes:
+  pgdata:
