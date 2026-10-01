@@ -1,0 +1,111 @@
+
+Dockerfile = opskrift på at lave et image
+Image = færdig pakke
+Service = beskrivelse af hvordan pakken skal bruges
+Container = den faktiske kørende instans
+
+-------------------------------------------------STEP 1-------------------------------------------------
+
+services:
+  frontend:
+
+services = beskriver vi de containere, vores app består af.
+frontend = vi opretter en service, som vi kalder frontend.
+
+Det er ikke selve containeren endnu. Vi er bare begyndt at beskrive, hvordan frontend-containeren skal oprettes.
+
+-------------------------------------------------STEP 1-------------------------------------------------
+
+build: ./some-webapp
+
+"Brug mappen some-webapp til at bygge denne service."
+
+Docker gør altså:
+    docker-compose.yml
+        ↓
+    build: ./some-webapp
+        ↓
+    some-webapp/
+        ↓
+    Dockerfile
+        ↓
+    Docker image
+
+./some-webapp fortæller hvor Docker skal finde det, den skal bruge til at bygge frontend-servicen — især vores Dockerfile.
+
+-------------------------------------------------STEP 1-------------------------------------------------
+ports:
+    - "3000:3000"
+
+Vi skal fortælle Docker Compose, at frontendens port 3000 inde i containeren skal være tilgængelig på port 3000 på din computer.
+
+Helt kort:
+ports forbinder en port på din computer med en port inde i containeren.
+
+-------------------------------------------------STEP 1-------------------------------------------------
+
+backend:
+    build: ./some-backend
+
+backend = Navnet på vores anden service.
+build: ./some-backend = Vi fortæller at vores backend service skal bygges ud fra some-backend mappen
+
+-------------------------------------------------STEP 1-------------------------------------------------
+ports:
+    - "3000:3000"
+
+Vi skal fortælle Docker Compose, at backends port 3006 inde i containeren skal være tilgængelig på port 3006 på din computer.
+
+-------------------------------------------------STEP 1-------------------------------------------------
+depends_on:
+    - backend
+
+Nu kan vi fortælle Compose, at frontend-servicen afhænger af backend-servicen.
+Det gør at når docker compose up køres, så ved compose at den skal starte backend containeren før frontend containeren
+
+Helt simpelt:
+Start backend-servicen før frontend-servicen.
+
+-------------------------------------------------STEP 1-------------------------------------------------
+environment:
+    - BACKEND_URL=http://backend:3006
+
+forbindelsen mellem frontend og backend.
+
+Frontend-containeren kan ikke bruge:
+    localhost:3006
+til at finde backend-containeren.
+I Docker Compose kan containerne i stedet finde hinanden via service-navnet.
+
+Vores backend-service hedder:
+    backend:
+
+Derfor kan frontend-containeren kommunikere med backend via:
+    http://backend:3006
+
+Resultat:
+Når frontend-containeren kører, får den environment variablen BACKEND_URL, som peger på backend-servicen på port 3006.
+
+-------------------------------------------------STEP 1-------------------------------------------------
+-------------------------------------------------STEP 1-------------------------------------------------
+-------------------------------------------------STEP 1-------------------------------------------------
+-------------------------------------------------STEP 1-------------------------------------------------
+-------------------------------------------------STEP 1-------------------------------------------------
+-------------------------------------------------STEP 1-------------------------------------------------
+-------------------------------------------------STEP 1-------------------------------------------------
+-------------------------------------------------STEP 1-------------------------------------------------
+-------------------------------------------------STEP 1-------------------------------------------------
+-------------------------------------------------STEP 1-------------------------------------------------
+-------------------------------------------------STEP 1-------------------------------------------------
+-------------------------------------------------STEP 1-------------------------------------------------
+-------------------------------------------------STEP 1-------------------------------------------------
+-------------------------------------------------STEP 1-------------------------------------------------
+-------------------------------------------------STEP 1-------------------------------------------------
+-------------------------------------------------STEP 1-------------------------------------------------
+-------------------------------------------------STEP 1-------------------------------------------------
+-------------------------------------------------STEP 1-------------------------------------------------
+-------------------------------------------------STEP 1-------------------------------------------------
+-------------------------------------------------STEP 1-------------------------------------------------
+-------------------------------------------------STEP 1-------------------------------------------------
+-------------------------------------------------STEP 1-------------------------------------------------
+-------------------------------------------------STEP 1-------------------------------------------------
