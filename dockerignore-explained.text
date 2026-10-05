@@ -21,7 +21,7 @@ Derefter:
 Så Docker laver sin egen:
 /app/node_modules/
 
--------------------------------------------------STEP 1-------------------------------------------------
+-------------------------------------------------STEP 2-------------------------------------------------
 .next
 
 .next = .next er den mappe, som Next.js selv laver, når du bygger appen.
@@ -31,7 +31,7 @@ Vi bruger derfor kun de mapper som vi har givet i vores build fase såsom:
 COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static
 
--------------------------------------------------STEP 1-------------------------------------------------
+-------------------------------------------------STEP 3-------------------------------------------------
 .git
 
 .git = .git er den mappe, hvor Git gemmer information om dit repository.
@@ -45,13 +45,25 @@ COPY --from=builder /app/.next/static ./.next/static
 
 Vi ignorerer den fordi vi ikke har brug for vores Git-historik for at bygge eller køre Next.js-appen.
 
--------------------------------------------------STEP 1-------------------------------------------------
+-------------------------------------------------STEP 4-------------------------------------------------
 .env*.local
 
 .env*.local = handler om environment-filer, som ofte bruges til at gemme indstillinger for projektet.
 
+eksempelvis:
+.env.local
+.env.development.local
+.env.test.local
 
--------------------------------------------------STEP 1-------------------------------------------------
+Vi ignorer dem fordi vi ikke vil sende potentielt farlige informationer med til vores Docker-image.
+
+
+-------------------------------------------------STEP 5-------------------------------------------------
 *.md
 
--------------------------------------------------STEP 1-------------------------------------------------
+Vi ignorerer alle markdown-filer som slutter på .md eksempelvis:
+README.md
+CHANGELOG.md
+NOTES.md
+
+-------------------------------------------------STEP 6-------------------------------------------------
