@@ -6,7 +6,7 @@ SoMe-nextjs is a small social media web application where users can create posts
 | --------- | ------------- | --------------------------------------------- | -------------------------- |
 | `webapp`  | Next.js       | built from `some-webapp/Dockerfile`           | `3000 → 3000`              |
 | `backend` | NestJS        | built from `some-backend/Dockerfile`          | `3001 → 3006`              |
-| `db`      | PostgreSQL 18 | `postgres:18-alpine` (pulled from Docker Hub) | not published              |
+| `db`      | PostgreSQL 16 | `postgres:16-alpine` (pulled from Docker Hub) | not published              |
 
 ## Architecture
 
@@ -90,13 +90,11 @@ docker compose config
 
 ## Volumes and persistence
 
-| Volume   | Mounted at                    | Stores                                   |
-| -------- | ----------------------------- | ---------------------------------------- |
-| `pgdata` | `/var/lib/postgresql` in `db` | All PostgreSQL data (posts, users, etc.) |
+| Volume   | Mounted at                                | Stores                                   |
+| -------- | ----------------------------------------- | ---------------------------------------- |
+| `pgdata` | `pgdata:/var/lib/postgresql/data` in `db` | All PostgreSQL data (posts, users, etc.) |
 
 The data survives `docker compose down` and `docker compose up`, because the volume is not removed. It is removed only with `docker compose down -v`.
-
-The PostgreSQL 18 image expects the volume at `/var/lib/postgresql` (not `/var/lib/postgresql/data`, which older versions used). A volume created by an older major version of PostgreSQL cannot be reused and must be recreated.
 
 Check the volume with:
 
