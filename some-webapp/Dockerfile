@@ -7,7 +7,6 @@ COPY . .
 RUN npm run build
 
 # Trin 2: kør koden
-# FROM node:22-alpine AS runner
 FROM gcr.io/distroless/nodejs22-debian12:nonroot AS runner
 WORKDIR /app
 COPY --from=builder /app/.next/standalone ./
