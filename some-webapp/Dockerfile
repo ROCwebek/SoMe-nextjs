@@ -1,4 +1,4 @@
-# Trin 1: byg koden
+# Stage 1: build the Next.js app (Alpine image with Node and npm)
 FROM node:22-alpine AS builder
 WORKDIR /app
 COPY package*.json ./
@@ -6,7 +6,7 @@ RUN npm ci
 COPY . .
 RUN npm run build
 
-# Trin 2: kør koden
+# Stage 2: runtime image (distroless: no shell, no npm, runs as non-root)
 FROM gcr.io/distroless/nodejs22-debian12:nonroot AS runner
 WORKDIR /app
 COPY --from=builder /app/.next/standalone ./

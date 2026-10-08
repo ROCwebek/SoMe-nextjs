@@ -1,176 +1,165 @@
-# SoMe - a containerised multi-service web app
+# SoMe-nextjs – Containerized Web Application
 
-A small social-media style app: you read a feed of posts and write new ones.
-It is built as three containers wired together by Docker Compose - a Next.js
-frontend, a NestJS REST API, and a PostgreSQL database.
+SoMe-nextjs is a small social media web application where users can create posts. It consists of a Next.js webapp, a NestJS backend and a PostgreSQL database.
+This project containerizes the application with Docker and manages the three services together with Docker Compose.
 
-This repo is the submission for the **Development Environments** project,
-*Containerizing a Web Application*.
+| Service   | Technology    | Image                                         | Host port → container port |
+| --------- | ------------- | --------------------------------------------- | -------------------------- |
+| `webapp`  | Next.js       | built from `some-webapp/Dockerfile`           | `3000 → 3000`              |
+| `backend` | NestJS        | built from `some-backend/Dockerfile`          | `3001 → 3006`              |
+| `db`      | PostgreSQL 16 | `postgres:16-alpine` (pulled from Docker Hub) | not published              |
 
-## Repo layout
+## Architecture
 
-| Path | What it is |
-| --- | --- |
-| [`some-webapp/`](some-webapp) | Next.js 15 (App Router) frontend - see its [README](some-webapp/README.md) |
-| [`some-backend/`](some-backend) | NestJS REST API over PostgreSQL via TypeORM - see its [README](some-backend/README.md) |
-| [`docker-compose.yml`](docker-compose.yml) | Builds and wires up all three services |
-
-## Quick start
-
-You need Docker Desktop (or any Docker engine with the Compose plugin). Nothing
-else - no Node.js install, no local PostgreSQL.
-
-```bash
-# 1. copy the env template (sets the database credentials)
-cp .env.example .env
-
-# 2. build the images and start everything
-docker compose up --build
+```
+Browser ──► localhost:3000 ──► webapp ──► backend:3006 ──► db:5432
+                               (Next.js)   (NestJS)        (PostgreSQL)
+                                                              │
+                                                       volume: pgdata
+        all three containers are on the network: some-network
 ```
 
-Then open:
+- The browser only talks to the webapp on port 3000.
+- Containers talk to each other on the Docker network `some-network`, using the service name as the address (e.g. `db`, `backend`).
+- Database data is stored in the named volume `pgdata`.
 
-- Frontend: <http://localhost:3000>
-- API: <http://localhost:3006/posts>
+## Prerequisites
 
-Stop everything with:
+- [Docker Desktop](https://www.docker.com/products/docker-desktop/) (includes Docker Compose)
+- Ports `3000` and `3001` must be free on your machine
+- A local `.env` file (see below). No real credentials are stored in the repository.
+
+## Running and stopping
+
+```bash
+git clone https://github.com/ROCwebek/SoMe-nextjs.git
+cd SoMe-nextjs
+cp .env.example .env     # then edit the values in .env
+docker compose up --build
+docker compose ps        # check that all three services are running
+```
+
+Open **http://localhost:3000**.
+
+Stop and remove the containers and the network (the data is kept):
 
 ```bash
 docker compose down
 ```
 
-## The services
+> **Delete the volume.**
+> `docker compose down -v` deletes the `pgdata` volume and all database data. Only use `-v` if you want to start over with an empty database.
 
-| Service | Built from | Port | Notes |
-| --- | --- | --- | --- |
-| `db` | `postgres:16-alpine` | internal only | Data persists in the named volume `some_db_data` |
-| `backend` | [`some-backend/Dockerfile`](some-backend/Dockerfile) | `3006` | Waits for `db` to pass its healthcheck before starting |
-| `frontend` | [`some-webapp/Dockerfile`](some-webapp/Dockerfile) | `3000` | Reaches the API at `http://backend:3006` over the internal network |
+### `.env` file
 
-The database port is deliberately **not** published to the host - only the
-frontend and the API can reach it, over the private network.
+`.env.example` shows which variables are needed:
 
-## How the containerisation requirements are met
-
-**Multi-stage builds.** Both Dockerfiles separate a `deps` stage (installs
-dependencies) and a `build` stage (compiles) from a slim `runtime` stage that
-copies in only the build output. The backend adds a `prod-deps` stage so that
-`npm ci --omit=dev` output ships instead of the full dev toolchain; the frontend
-uses Next.js `output: "standalone"`, which emits a minimal server with only the
-modules it actually imports. The compilers and dev dependencies never reach the
-final image.
-
-**Rootless.** Each runtime stage ends with `USER node`, the unprivileged user
-baked into `node:20-alpine`. Files copied into the image are `--chown`ed to that
-user, so nothing runs as root.
-
-**Small base images.** Every stage builds on Alpine variants.
-
-**Named volume.** `some_db_data` is mounted at `/var/lib/postgresql/data`, so the
-database survives the containers being removed and recreated.
-
-**Named network.** All three services join `some-net`. Containers address each
-other by service name (`db`, `backend`) rather than by IP.
-
-**Resource limits.** Each service caps out at `mem_limit: 512m` and `cpus: 0.75`,
-so no single container can starve the others.
-
-**Startup ordering.** `db` has a `pg_isready` healthcheck, and `backend` uses
-`depends_on: condition: service_healthy` so the API does not try to connect to a
-database that is still initialising.
-
-## Configuration
-
-There is **one** env file, at the repo root. Copy `.env.example` to `.env` and
-adjust if you want non-default values. It serves both ways of running the
-project: Compose reads it automatically, and the backend reads it too when you
-run that on your host instead.
-
-| Variable | Meaning | Default |
-| --- | --- | --- |
-| `DB_USER` | PostgreSQL user, created on first start | `some` |
-| `DB_PASS` | That user's password | `some` |
-| `DB_NAME` | Database name | `some` |
-| `DB_HOST` | Database host, host-mode only | `localhost` |
-| `DB_PORT` | Database port, host-mode only | `5432` |
-| `PORT` | Port the backend listens on | `3006` |
-| `BACKEND_URL` | Where the frontend reaches the API | `http://localhost:3006` |
-
-Under Compose, `docker-compose.yml` overrides `DB_HOST`/`DB_PORT` with `db` and
-`5432` and `BACKEND_URL` with `http://backend:3006`, because inside the network
-the services are reachable at their service names. Values set in
-`docker-compose.yml` always win over the file, so the host-mode entries above
-are simply ignored there.
-
-The stack also starts with no `.env` at all - every value has a default.
-
-## Verifying it works
-
-**The volume really persists data.** Add a post through the frontend, then:
-
-```bash
-docker compose down     # removes the containers, keeps the volume
-docker compose up       # no --build needed
+```
+DB_NAME=
+DB_USER=
+DB_PASSWORD=
+DB_HOST=
+DB_PORT=
 ```
 
-The post is still in the feed. Only `docker compose down -v` (or
-`docker volume rm some_db_data`) wipes the database.
+## Docker configuration
 
-**Resource usage.** With the stack running:
+| File                      | Role                                                                           |
+| ------------------------- | ------------------------------------------------------------------------------ |
+| `docker-compose.yml`      | Defines the three services, the network `some-network` and the volume `pgdata` |
+| `some-backend/Dockerfile` | Builds the NestJS backend image (3 stages)                                     |
+| `some-webapp/Dockerfile`  | Builds the Next.js webapp image (2 stages)                                     |
 
-```bash
-docker stats
-```
+Key settings in `docker-compose.yml`:
 
-Each container should sit well under its 512 MB / 0.75 CPU cap.
+- `build:` on `backend` and `webapp` builds an image from the Dockerfile in that folder. `db` uses a ready-made image.
+- `env_file:` passes configuration into the containers.
+- `depends_on:` controls start order: `db` → `backend` → `webapp`.
+- `deploy.resources.limits` limits the backend to 0.5 CPU and 256 MB memory.
 
-**Image sizes.** To see what the multi-stage builds saved:
+Dockerfile stages:
 
-```bash
-docker images | grep some-nextjs
-```
+- **Backend:** `build` (compiles the code) → `prod-deps` (production dependencies only) → `runner` (distroless, copies in `node_modules` and `dist`).
+- **Webapp:** `builder` (builds Next.js in standalone mode) → `runner` (distroless, copies in the standalone output).
 
-**The API directly.**
-
-```bash
-curl http://localhost:3006/posts
-curl -X POST http://localhost:3006/posts \
-  -H 'Content-Type: application/json' \
-  -d '{"title":"Hello","body":"First post","author":"Oscar"}'
-```
-
-## Remote access (optional)
-
-To demo the app running on a remote machine, forward the port over SSH rather
-than exposing it publicly:
+To see the final configuration with all variables filled in:
 
 ```bash
-ssh -L 3000:127.0.0.1:3000 you@your-remote
+docker-compose config
 ```
 
-The remote container's port 3000 then answers at <http://localhost:3000> in your
-own browser.
+## Volumes and persistence
 
-## Troubleshooting
+| Volume   | Mounted at                                | Stores                                   |
+| -------- | ----------------------------------------- | ---------------------------------------- |
+| `pgdata` | `pgdata:/var/lib/postgresql/data` in `db` | All PostgreSQL data (posts, users, etc.) |
 
-**Port already in use.** Something else is on 3000 or 3006. Stop it, or change
-the left-hand side of the `ports` mapping in `docker-compose.yml`.
+The data survives `docker compose down` and `docker compose up`, because the volume is not removed. It is removed only with `docker compose down -v`.
 
-**Backend exits with a connection error.** Usually a stale volume whose
-credentials no longer match `.env` - Postgres only applies `POSTGRES_USER` and
-`POSTGRES_PASSWORD` when it initialises an *empty* data directory. Reset with
-`docker compose down -v && docker compose up --build`.
+Check the volume with:
 
-**Frontend loads but the feed is empty and logs "Could not load posts".** The
-API is not reachable. Check `docker compose ps` that `backend` is running, and
-`docker compose logs backend`.
+```bash
+docker volume ls
+```
 
-**Changes to the source do not show up.** The images are built, not
-bind-mounted, so rebuild with `docker compose up --build`.
+## Networking
 
-## Developing without Docker
+- **Network:** `some-network` (defined as `app-net` in the Compose file). All three services are connected to it.
+- **Host ports (used from the browser or terminal):** `3000` (webapp) and `3001` (backend). The backend port is published so the API can be tested directly from the host, for example with `curl` fx `curl http://localhost:3001/posts`.
+- **Internal addresses (used between containers):** `backend:3006` and `db:5432`. For example the webapp uses `BACKEND_URL=http://backend:3006`, and the backend uses `DB_HOST=db`.
+- **The database is not published to the host.** It can only be reached from containers on `some-network`, which reduces the attack surface.
 
-Both services run directly on a host with Node.js 20 and a local PostgreSQL -
-useful for fast iteration on one service. They use the same root `.env`. See
-[`some-backend/README.md`](some-backend/README.md) and
-[`some-webapp/README.md`](some-webapp/README.md).
+## Security and efficiency
+
+What was implemented:
+
+- **Multi-stage builds** keep the final images small: build tools and dev dependencies stay in the build stages.
+- **Distroless runtime image** (`gcr.io/distroless/nodejs22-debian12:nonroot`): no shell and no package manager, and fewer packages than a normal Node image.
+- **Non-root user:** the `:nonroot` image runs as user `65532`. This was verified, not only assumed (see Testing).
+- **Limited exposure:** the database port is not published.
+- **Resource limits:** the backend is limited to 0.5 CPU and 256 MB.
+- **No secrets in the repository:** credentials are read from `.env`.
+
+Trade-offs:
+
+- Distroless images have no shell, so you cannot use `docker exec ... sh` to look inside a container. Use `docker compose logs` instead.
+- Trivy reports finding DS-0002 ("no USER in Dockerfile") because it only reads the Dockerfile, while the non-root user comes from the base image. It is a false positive here. See [TRIVY.md](TRIVY.md) for how to scan the images.
+
+## Testing and verification
+
+| Check                  | Command                                                                                      | What to expect                        |
+| ---------------------- | -------------------------------------------------------------------------------------------- | ------------------------------------- |
+| Resolved configuration | `docker compose config`                                                                      | No errors                             |
+| Services running       | `docker compose ps`                                                                          | `db`, `backend` and `webapp` are `Up` |
+| Recent logs            | `docker compose logs --tail=50`                                                              | No errors from the services           |
+| Non-root user          | `docker inspect --format '{{.Config.User}}' some-nextjs-backend` (also `some-nextjs-webapp`) | `65532`                               |
+| Resource use           | `docker stats`                                                                               | CPU and memory per container          |
+
+### Persistence test
+
+1. `docker compose up --build`
+2. Open http://localhost:3000 and create a post.
+3. `docker compose down`
+4. `docker compose up`
+5. Reload the page: the post should still be there.
+
+### Resource use
+
+Measured with `docker stats` on a Mac with Docker Desktop, while the stack was
+running right after startup:
+
+| Container | CPU    | Memory   | Limit   |
+| --------- | ------ | -------- | ------- |
+| webapp    | 0.00 % | 43 MiB   | none    |
+| backend   | 0.00 % | 48.5 MiB | 256 MiB |
+| db        | 0.01 % | 24 MiB   | none    |
+
+## Limitations and next steps
+
+- **No healthcheck:** `depends_on` only waits for the `db` container to start, not for PostgreSQL to be ready. On the very first start the backend may fail to connect and need a restart (`docker compose up` again).
+- **Resource limits** are only set on the backend, not on `webapp` or `db`.
+- **Manual setup:** the `.env` file must be created by hand from `.env.example`.
+- **Known Trivy findings:** In this project, `trivy config .` reports DS-0002 (no `USER` in the Dockerfile).
+  This is a false positive: the base image is a distroless `nonroot` image, so the container already runs as a
+  non-root user. Trivy only reads the Dockerfile and cannot see this.
+- **No automated tests** for the containers; verification is done manually with the commands above.
