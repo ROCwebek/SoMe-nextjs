@@ -55,11 +55,15 @@ docker compose down
 `.env.example` shows which variables are needed:
 
 ```
-DB_NAME=
-DB_USER=
-DB_PASSWORD=
-DB_HOST=
-DB_PORT=
+DB_USER=some
+DB_PASSWORD=some
+DB_NAME=some
+DB_HOST=db
+DB_PORT=5432
+PORT=3006
+POSTGRES_DB=some
+POSTGRES_USER=some
+POSTGRES_PASSWORD=some
 ```
 
 ## Docker configuration
