@@ -167,3 +167,5 @@ running right after startup:
   This is a false positive: the base image is a distroless `nonroot` image, so the container already runs as a
   non-root user. Trivy only reads the Dockerfile and cannot see this.
 - **No automated tests** for the containers; verification is done manually with the commands above.
+
+test
